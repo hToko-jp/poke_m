@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍉どうぶつ カタカナ🍓</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 30px;
+      overflow: hidden;
+      background-color: black;
+      color: white;
+    }
+
+span{
+    color: rgb(92, 205, 145);
+}
+
+    input, button {
+      font-size: 1.2em;
+      padding: 10px;
+      margin: 10px;
+    }
+
+    #result {
+      font-size: 1.5em;
+      margin: 20px;
+      height: 2em;
+    }
+
+    #question {
+      font-size: 4em;
+      margin: 20px;
+      height: 2em;
+      color: rgb(169, 154, 154);
+      padding-right: 250px;
+    }
+
+    #answer {
+      font-size: 3em;
+      margin: 20px;
+      height: 2em;
+    }
+
+    .ansBtn{
+        background-color: #df2a2a;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        padding: 10px 20px;
+        transition: background-color 0.3s ease;
+    }   
+    
+    
+    #score {
+      font-size: 1.5em;
+      margin: 20px;
+      color: hotpink;
+    }
+
+    
+
+    .firework {
+     position: fixed;
+     width: 10px;
+     height: 10px;
+     border-radius: 50%;
+     z-index: 9999;
+}
+
+
+    @keyframes fall {
+      to {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+      }   
+    }
+
+    @keyframes pop {
+     
+     0%   { opacity: 1; transform: scale(1.2); }
+     50%  { opacity: 0.6; transform: scale(1); }
+     100% { opacity: 0; transform: scale(0.9); }
+   }
+
+  #result.popEffect {
+    animation: pop 2.5s fadeOut 3.5 ease-out ;
+    /* animation: fadeOut 1.5s ease-out; */
+    font-size: 4em;
+    font-weight: bold;
+    color: hotpink;
+    text-shadow: 2px 2px 4px rgba(255, 105, 180, 0.7);
+    transform: scale(1.2);
+    transition: transform 0.3s ease-out, color 0.3s ease-out;
+  }
+  
+  /* 終了時の再スタートボタン */
+  #retryButton {
+  padding: 6px 16px;
+  font-size: 1rem;
+  background: linear-gradient(to right, #4CAF50, #2E7D32);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+#retryButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+}
+
+  </style>
+</head>
+
+
+<body>
+  <div>
+  <h1>カタカナ ポケモン チャレンジ！🍰<span>レベル１</span></h1>
+  <p id="score"></p>
+  <p id="question"></p>
+  <input type="text" id="answer" placeholder="カタカナで かいてね！">
+  <button class="ansBtn" onclick="checkAnswer()">できたよ</button>
+  <p id="result"></p>
+ </div>
+
+
+  <script>
+// レベル別の問題
+const levels = {
+  1: [
+  { hiragana: "るかりお", katakana: "ルカリオ" },
+  { hiragana: "あるせうす", katakana: "アルセウス" },
+  { hiragana: "ぜらおら", katakana: "ゼラオラ" },
+  { hiragana: "かびごん", katakana: "カビゴン" },
+  { hiragana: "ろこん", katakana: "ロコン" },
+    // … more questions
+  ],
+  2: [
+  { hiragana: "いーぶい", katakana: "イーブイ" },
+  { hiragana: "れっくうざ", katakana: "レックウザ" },
+  { hiragana: "かいおーが", katakana: "カイオーガ" },
+  { hiragana: "がぶりあす", katakana: "ガブリアス" },
+  { hiragana: "だーくらい", katakana: "ダークライ" },
+  { hiragana: "ふぁいやー", katakana: "ファイヤー" },      
+      
+    // … harder questions
+  ],
+  3: [
+  { hiragana: "みみっきゅ", katakana: "ミミッキュ" },
+  { hiragana: "ぎらてぃな", katakana: "ギラティナ" },
+  { hiragana: "ぴかちゅー", katakana: "ピカチュー" },
+  { hiragana: "みゅうつー", katakana: "ミュウツー" },
+  { hiragana: "でぃあるが", katakana: "ディアルガ" },
+  { hiragana: "つたーじゃ", katakana: "ツタージャ" },
+  { hiragana: "まっしぶーん", katakana: "マッシブーン" },
+      
+    // … harder questions
+  ],
+};
+
+// ページ読み込み時に前回のレベルを取得してスタート
+document.addEventListener("DOMContentLoaded", () => {
+  localStorage.removeItem('currentLevel'); // 前回のデータを消す！
+  loadLevel(1); // れべる1からスタート！
+});
+
+// 現在のレベル管理
+let currentIndex = 0;
+let questions = [];
+let currentLevel = 1;
+
+
+function loadLevel(level) {
+  currentLevel = level;
+  questions = levels[level];
+  usedQuestions = [];                  // ⬅︎ そして、安全にusedQuestionsをリセット！
+  currentIndex = 0;
+  // console.log(questions)
+
+  document.querySelector("h1 span").textContent = `れべる${level}`;
+  document.getElementById("answer").style.display = "inline";
+  document.querySelector("button").style.display = "inline";
+
+  showQuestion();
+  setTimeout(() => {
+  document.getElementById("answer").focus();
+}, 100);
+
+}
+
+
+// ゲームクリアの演出
+function showGameComplete() {
+  const result = document.getElementById("result");
+  result.innerHTML = `
+    🎉 ぜんぶ クリアしたよ すばらしい! 🌈<br>
+    <button onclick="restartGame()" id="retryButton">もういちど やってみる</button>
+  `;
+
+  document.getElementById("question").textContent = "";
+  document.getElementById("answer").style.display = "none";
+  document.querySelector("button").style.display = "none";
+
+  launchFullFireworks(); // 祝福の花火 🎆
+}
+
+// リスタート機能
+function restartGame() {
+  localStorage.setItem('currentLevel', 1); // れべる1にもどす
+  loadLevel(1); // すぐスタート！
+}
+
+function showLevelUpAnimation(level) {
+  const result = document.getElementById("result");
+  result.innerHTML = `✨やったー！<span style="color: red;">レベル${level}</span>へ しんか✨`;
+  result.classList.add("popEffect");
+}
+
+
+// レベル切り替え関数
+function moveToNextLevel() {
+  if (currentLevel < Object.keys(levels).length) {
+    const nextLevel = currentLevel + 1;
+    localStorage.setItem('currentLevel', nextLevel);
+    showLevelUpAnimation(nextLevel);
+    setTimeout(() => {
+      loadLevel(nextLevel);
+    }, 1500);
+  } else {
+    showGameComplete();
+  }
+}
+
+   
+    function getRandomQuestionIndex() {
+  return Math.floor(Math.random() * questions.length);
+}
+    let usedQuestions = []; // 使用済みの問題を管理する配列
+
+    // クリアタイムの表示
+    let startTime = 0;
+    if (currentIndex === 0) {
+  startTime = Date.now();
+}
+const endTime = Date.now();
+const timeTaken = Math.floor((endTime - startTime) / 1000); // 秒単位
+
+//////// 問題を表示する関数///////////
+function showQuestion() {
+  if (usedQuestions.length === 0) {
+    // ゲーム開始時間を記録
+    startTime = Date.now(); 
+  }
+
+  if (usedQuestions.length < questions.length) {
+    let randomIndex;
+    do {
+      randomIndex = getRandomQuestionIndex();
+    } while (usedQuestions.includes(randomIndex));
+
+    usedQuestions.push(randomIndex);
+    currentIndex = randomIndex;
+
+    document.getElementById("question").textContent = `(${usedQuestions.length}) ` + questions[currentIndex].hiragana;
+    document.getElementById("answer").value = "";
+    document.getElementById("result").textContent = "";
+  } else {
+    // ゲーム終了！
+    const endTime = Date.now();
+    const timeTaken = Math.floor((endTime - startTime) / 1000);
+
+    document.getElementById("question").innerHTML = `レベル<span style color="red">${currentLevel}</span>はおわりだよ🌟`;
+    
+    document.getElementById("answer").style.display = "none";
+    document.querySelector("button").style.display = "none";
+    document.getElementById("score").textContent = "";
+    document.getElementById("result").innerHTML = `おつかれさま！🎉<span> <br>クリアタイムは ${timeTaken}秒</span>`;
+    moveToNextLevel();
+  }
+}
+       function launchFullFireworks() {
+       for (let i = 0; i < 30; i++) { // 5か所に発射（好きな数に増やせます）
+       const x = Math.random() * window.innerWidth;
+       const y = Math.random() * window.innerHeight * 0.5; // 上半分に表示すると花火っぽい！
+       createFirework(x, y);
+     }
+}
+
+// ユーザーの回答をチェックする関数
+// ここで、ユーザーが入力したカタカナと正解を比較
+ 
+  function checkAnswer() {
+  const userInput = document.getElementById("answer").value.trim();
+  const correctAnswer = questions[currentIndex].katakana;
+
+  if (userInput === correctAnswer) {
+    document.getElementById("result").textContent = "せいかい！🎉";
+
+    // 花火のエフェクトを追加
+    const x = window.innerWidth / 2; // 画面中央に花火
+    const resultElem = document.getElementById("result");
+    resultElem.classList.add("popEffect");
+
+    launchFullFireworks(); // 🌟 全画面花火！
+
+    currentIndex++;
+    setTimeout(showQuestion, 1500);
+  } else {
+    document.getElementById("result").textContent = "ちがうよ〜💦";
+  }
+}
+
+
+    // ここから花火のイベント
+  function createFirework(x, y) {
+  const colors = ["red", "orange", "yellow", "fuchsia", "skyblue", "white"];
+  for (let i = 0; i < 20; i++) {
+    const particle = document.createElement("div");
+    particle.className = "firework";
+    particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    particle.style.left = x + "px";
+    particle.style.top = y + "px";
+    document.body.appendChild(particle);
+
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = Math.random() * 100;
+
+    particle.animate([
+      { transform: "translate(0, 0)", opacity: 5 },
+      {
+        transform: `translate(${Math.cos(angle)*radius}px, ${Math.sin(angle)*radius}px)`,
+        opacity: 0
+      }
+    ], {
+      duration: 1300,
+      easing: "ease-out"
+      
+    });
+
+    setTimeout(() => particle.remove(), 1100);
+  }
+}
+
+    
+// キーボードのEnterキーで回答を送信
+    document.getElementById("answer").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    checkAnswer();
+  }
+});
+
+   
+  </script>
+</body>
+</html>
